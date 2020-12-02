@@ -2,7 +2,7 @@ from datetime import datetime
 
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes import generic
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.auth.models import User
 
 try:
@@ -10,14 +10,14 @@ try:
 except ImportError:
     now = datetime.now
 
-from managers import VoteManager, SimilarUserManager
+from .managers import VoteManager, SimilarUserManager
 
 class Vote(models.Model):
-    content_type    = models.ForeignKey(ContentType, related_name="votes")
+    content_type    = models.ForeignKey(ContentType, related_name="votes", on_delete=models.CASCADE)
     object_id       = models.PositiveIntegerField()
     key             = models.CharField(max_length=32)
     score           = models.IntegerField()
-    user            = models.ForeignKey(User, blank=True, null=True, related_name="votes")
+    user            = models.ForeignKey(User, blank=True, null=True, related_name="votes", on_delete=models.CASCADE)
     ip_address      = models.IPAddressField()
     cookie          = models.CharField(max_length=32, blank=True, null=True)
     date_added      = models.DateTimeField(default=now, editable=False)
@@ -25,7 +25,7 @@ class Vote(models.Model):
 
     objects         = VoteManager()
 
-    content_object  = generic.GenericForeignKey()
+    content_object  = GenericForeignKey()
 
     class Meta:
         unique_together = (('content_type', 'object_id', 'key', 'user', 'ip_address', 'cookie'))
@@ -50,13 +50,13 @@ class Vote(models.Model):
     partial_ip_address = property(partial_ip_address)
 
 class Score(models.Model):
-    content_type    = models.ForeignKey(ContentType)
+    content_type    = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id       = models.PositiveIntegerField()
     key             = models.CharField(max_length=32)
     score           = models.IntegerField()
     votes           = models.PositiveIntegerField()
-    
-    content_object  = generic.GenericForeignKey()
+
+    content_object  = GenericForeignKey()
 
     class Meta:
         unique_together = (('content_type', 'object_id', 'key'),)
@@ -65,29 +65,29 @@ class Score(models.Model):
         return u"%s scored %s with %s votes" % (self.content_object, self.score, self.votes)
 
 class SimilarUser(models.Model):
-    from_user       = models.ForeignKey(User, related_name="similar_users")
-    to_user         = models.ForeignKey(User, related_name="similar_users_from")
+    from_user       = models.ForeignKey(User, related_name="similar_users", on_delete=models.CASCADE)
+    to_user         = models.ForeignKey(User, related_name="similar_users_from", on_delete=models.CASCADE)
     agrees          = models.PositiveIntegerField(default=0)
     disagrees       = models.PositiveIntegerField(default=0)
     exclude         = models.BooleanField(default=False)
-    
+
     objects         = SimilarUserManager()
-    
+
     class Meta:
         unique_together = (('from_user', 'to_user'),)
 
     def __unicode__(self):
-        print u"%s %s similar to %s" % (self.from_user, self.exclude and 'is not' or 'is', self.to_user)
+        return "%s %s similar to %s" % (self.from_user, self.exclude and 'is not' or 'is', self.to_user)
 
 class IgnoredObject(models.Model):
-    user            = models.ForeignKey(User)
-    content_type    = models.ForeignKey(ContentType)
+    user            = models.ForeignKey(User, on_delete=models.CASCADE)
+    content_type    = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id       = models.PositiveIntegerField()
-    
-    content_object  = generic.GenericForeignKey()
-    
+
+    content_object  = GenericForeignKey()
+
     class Meta:
         unique_together = (('content_type', 'object_id'),)
-    
+
     def __unicode__(self):
         return self.content_object
