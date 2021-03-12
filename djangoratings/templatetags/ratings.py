@@ -6,10 +6,16 @@ Template tags for Django
 from django import template
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import ObjectDoesNotExist
+from django.template import Variable
 
 from djangoratings.models import Vote
 
 register = template.Library()
+
+
+def resolve_variable(path, context):
+    return Variable(path).resolve(context)
+    
 
 class RatingByRequestNode(template.Node):
     def __init__(self, request, obj, context_var):
@@ -19,8 +25,8 @@ class RatingByRequestNode(template.Node):
     
     def render(self, context):
         try:
-            request = template.resolve_variable(self.request, context)
-            obj = template.resolve_variable(self.obj, context)
+            request = resolve_variable(self.request, context)
+            obj = resolve_variable(self.obj, context)
             field = getattr(obj, self.field_name)
         except (template.VariableDoesNotExist, AttributeError):
             return ''
@@ -55,8 +61,8 @@ register.tag('rating_by_request', do_rating_by_request)
 class RatingByUserNode(RatingByRequestNode):
     def render(self, context):
         try:
-            user = template.resolve_variable(self.request, context)
-            obj = template.resolve_variable(self.obj, context)
+            user = resolve_variable(self.request, context)
+            obj = resolve_variable(self.obj, context)
             field = getattr(obj, self.field_name)
         except template.VariableDoesNotExist:
             return ''
